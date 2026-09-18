@@ -156,7 +156,13 @@ class LogicEngine(BaseEngine):
         issues: List[Issue] = []
         sents = doc.sentences
         for idx, (s, e, sent) in enumerate(sents):
-            if not any(c in sent for c in self.causal):
+            matches = [c for c in self.causal if c in sent]
+            if not matches:
+                continue
+            # 本句内"连接词"之前已有分句（含逗号），说明因已在句中自陈，
+            # 不构成跳步，跳过（如「系统未对接，导致二次录入」）。
+            pos = min(sent.find(c) for c in matches if sent.find(c) >= 0)
+            if pos > 0 and "，" in sent[:pos]:
                 continue
             if _EVIDENCE.search(sent):
                 continue
@@ -171,7 +177,7 @@ class LogicEngine(BaseEngine):
                 span=Span(s, e),
                 original=sent.strip(),
                 suggestion="补充支撑该因果判断的事实/数据，或改为「这可能与……有关」等留有余地的表述",
-                explain=f"检测到因果连接词 {[c for c in self.causal if c in sent][:2]}，"
+                explain=f"检测到因果连接词 {[c for c in matches][:2]}，"
                         "但上下文未发现可验证的论据。",
                 source="论证逻辑规范",
                 confidence=0.72,
@@ -181,31 +187,49 @@ class LogicEngine(BaseEngine):
         return issues
 
     # ---- 4. 绝对化断言 -----------------------------------------------
+    # 硬断言：本身即构成过度断定，无论是否带证据都应提示（要求举证或弱化）。
+    _HARD_ABSOLUTE = {"必然", "必然导致", "唯一途径", "根本保证", "完全取决于"}
+
     def _absolute_claims(self, doc: Document) -> List[Issue]:
         issues: List[Issue] = []
         for s, e, sent in doc.sentences:
             hits = [w for w in self.absolute if w in sent]
             if not hits:
                 continue
-            has_evidence = bool(_EVIDENCE.search(sent))
-            if has_evidence and len(hits) <= 1:
+            stripped = sent.strip()
+            # 修辞性开场白（句首 + 紧接逗号，如「众所周知，…」「显而易见，…」）
+            # 是通行的话语衔接，并非事实断言，跳过以免误报。
+            if any(stripped.startswith(w) and "，" in stripped[: len(w) + 6] for w in hits):
                 continue
-            severity = Severity.MAJOR if len(hits) >= 2 or not has_evidence else Severity.MINOR
-            span_start = min(s + sent.find(w) for w in hits)
-            span_end = max(s + sent.find(w) + len(w) for w in hits)
+            has_evidence = bool(_EVIDENCE.search(sent))
+            hard = [w for w in hits if w in self._HARD_ABSOLUTE]
+            if hard:
+                severity = Severity.MAJOR if (len(hard) >= 2 or not has_evidence) else Severity.MINOR
+                terms = hard
+            elif not has_evidence:
+                # 软断言（毋庸置疑/显而易见/标志着/证明了…）仅在无证据支撑时
+                # 作为低置信提示，不升级为严重问题。
+                severity = Severity.INFO
+                terms = [w for w in hits if w not in self._HARD_ABSOLUTE]
+            else:
+                continue
+            span_start = min(s + sent.find(w) for w in terms)
+            span_end = max(s + sent.find(w) + len(w) for w in terms)
             issues.append(make_issue(
                 category=Category.LOGIC,
                 severity=severity,
                 rule_id="LOGIC-ABSOLUTE",
-                message=f"绝对化断言「{'、'.join(hits[:3])}」缺少充分举证，易被质疑严谨性",
+                message=(f"绝对化断言「{'、'.join(terms[:3])}」"
+                         f"{'缺少充分举证，易被质疑严谨性' if severity != Severity.INFO
+                           else '属修辞性表述，建议核实或改为可验证表述'}"),
                 span=Span(span_start, span_end),
                 original=sent.strip()[:80],
                 suggestion="改为可度量、可验证的表述（如「在调研样本中」「显著」），或补充统计依据",
                 explain="绝对化表述在审稿与舆情复核中是高风险点：一旦存在反例即构成事实性瑕疵。",
                 source="学术写作规范 / 公文用语规范",
-                confidence=0.8,
+                confidence=0.8 if severity != Severity.INFO else 0.6,
                 agent="logic",
-                meta={"defect": "absolute_claim", "terms": hits[:5], "has_evidence": has_evidence},
+                meta={"defect": "absolute_claim", "terms": terms[:5], "has_evidence": has_evidence},
             ))
         return issues
 
@@ -233,19 +257,34 @@ class LogicEngine(BaseEngine):
         return issues
 
     # ---- 6. 指代不明 -------------------------------------------------
+    # 单字代词（其/此/该/这些/那些）在中文里几乎句句都有明确的上下文所指，
+    # 作为自动告警几乎必为假阳性，故直接排除，只保留多字短语的核查。
+    _SAFE_DEMONSTRATIVES = {"其", "此", "该", "这些", "那些"}
+    # 可充当先行语的名词集合（比单一"中心语"更宽，覆盖"二次录入现象"等情形）。
+    _REFERENT_NOUNS = (
+        "现象", "问题", "情况", "做法", "举措", "机制", "模式", "经验", "矛盾",
+        "事项", "内容", "成效", "短板", "瓶颈", "改革", "政策", "措施", "方案",
+        "工程", "项目", "业务", "流程", "制度", "活动", "行动", "探索", "尝试", "转型",
+    )
+
     def _vague_reference(self, doc: Document) -> List[Issue]:
         issues: List[Issue] = []
         sents = doc.sentences
         for idx, (s, e, sent) in enumerate(sents):
             stripped = sent.strip().lstrip("#* ")
             for word in self.vague:
+                if word in self._SAFE_DEMONSTRATIVES:
+                    continue
                 if not stripped.startswith(word):
                     continue
-                # 先行语检测：指代词的"中心语"应在上文出现过（如前文出现"……做法"，
-                # 则"该做法"有先行语；若上文只有"……现象"，则"该做法"属指代不明）。
+                # 先行语检测：指代词的"中心语"或广义指代名词应在上文出现过。
+                # 窗口由 3 句放宽到 5 句，并允许"二次录入现象"这类非中心语先行语。
                 head = _refer_head(word)
-                prev = "".join(x[2] for x in sents[max(0, idx - 3):idx])
-                if head and re.search(r"[\u4e00-\u9fff]{1,6}" + re.escape(head), prev):
+                prev = "".join(x[2] for x in sents[max(0, idx - 5):idx])
+                if head and re.search(r"[\u4e00-\u9fff]{1,8}" + re.escape(head), prev):
+                    continue
+                if any(re.search(r"[\u4e00-\u9fff]{2,6}" + re.escape(n), prev)
+                       for n in self._REFERENT_NOUNS):
                     continue
                 if not head and len(prev.strip()) > 12:
                     continue
