@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import io
+import os
 import sys
 import time
 from pathlib import Path
@@ -23,6 +24,33 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 from streamlit_option_menu import option_menu
+
+
+# ----------------------------------------------------------------------
+# Streamlit Cloud Secrets -> 环境变量（PFRD_ 前缀）
+# 让云端 LLM 配置（OpenAI 兼容端点等）通过 Secrets 生效；
+# 本地无 Secrets 时静默跳过，不影响本机以 config/settings.yaml 运行。
+# 必须在 get_agent()（加载配置）之前执行。
+# ----------------------------------------------------------------------
+def _sync_streamlit_secrets_to_env() -> None:
+    try:
+        llm = st.secrets.get("llm")  # type: ignore[attr-defined]
+    except Exception:
+        return
+    if not isinstance(llm, dict):
+        return
+
+    def _walk(node: dict, parts: list) -> None:
+        for k, v in node.items():
+            if isinstance(v, dict):
+                _walk(v, parts + [k])
+            else:
+                os.environ["PFRD_" + "__".join(parts + [k]).upper()] = str(v)
+
+    _walk(llm, ["llm"])
+
+
+_sync_streamlit_secrets_to_env()
 
 ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT / "src"))
