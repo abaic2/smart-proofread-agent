@@ -902,7 +902,7 @@ def page_audit() -> None:
         st.caption("目标文体用于风格量化诊断；稿件类型用于调度决策。")
 
     disabled = not (text and text.strip())
-    if st.button("开始审校", type="primary", disabled=disabled, use_container_width=False):
+    if st.button("开始审校", type="primary", disabled=disabled):
         run_audit(text, source_name, doc_type, preset)
 
     if st.session_state.get("report") is not None:
@@ -1138,18 +1138,19 @@ def page_history() -> None:
               "INFO": "提示", "issue_count": "问题数"}
     show_cols = ["ts", "source", "doc_type", "score", "gate",
                  "FATAL", "MAJOR", "MINOR", "INFO", "issue_count"]
-    df = pd.DataFrame(hist)[show_cols].rename(columns=rename)
+    raw = pd.DataFrame(hist)
+    df = raw[show_cols].rename(columns=rename)
     st.markdown("#### 历次审校记录")
-    st.dataframe(df, use_container_width=True, hide_index=True)
+    st.dataframe(df, **STRETCH, hide_index=True)
 
     c1, c2 = st.columns([1, 1], gap="large")
     gate_color = {"BLOCK": "#E54545", "REVIEW": "#D2691E", "PASS": "#2E8B57"}
     with c1:
         st.markdown("#### 综合分对比")
         fig = go.Figure()
-        fig.add_bar(x=df["来源"], y=df["综合分"],
-                    marker_color=[gate_color.get(g, "#888") for g in df["门禁"]],
-                    text=df["综合分"], textposition="outside")
+        fig.add_bar(x=raw["source"], y=raw["score"],
+                    marker_color=[gate_color.get(g, "#888") for g in raw["gate"]],
+                    text=raw["score"], textposition="outside")
         fig.update_layout(margin=dict(l=20, r=20, t=10, b=20), yaxis_range=[0, 105],
                           paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
                           font=dict(family="Noto Sans SC, sans-serif"))
@@ -1160,7 +1161,7 @@ def page_history() -> None:
                ("MINOR", "一般", "#2E8B57"), ("INFO", "提示", "#2F54EB")]
         fig2 = go.Figure()
         for key, label, col in sev:
-            fig2.add_bar(name=label, x=df["来源"], y=df[key], marker_color=col)
+            fig2.add_bar(name=label, x=raw["source"], y=raw[key], marker_color=col)
         fig2.update_layout(barmode="stack", margin=dict(l=20, r=20, t=10, b=20),
                            legend=dict(orientation="h", y=-0.18),
                            paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
@@ -1173,7 +1174,7 @@ def page_history() -> None:
         fig3 = go.Figure()
         for d_ in dims:
             fig3.add_trace(go.Scatter(
-                x=df["来源"], y=[h["dimensions"].get(d_) for h in hist],
+                x=raw["source"], y=[h["dimensions"].get(d_) for h in hist],
                 mode="lines+markers", name=d_))
         fig3.update_layout(margin=dict(l=20, r=20, t=10, b=20), yaxis_range=[0, 105],
                            legend=dict(orientation="h", y=-0.2),

@@ -32,10 +32,15 @@ pip install -r requirements.txt
 streamlit run app.py            # 浏览器打开 http://localhost:8501
 ```
 
-工作台含五个页面：**概览**（能力矩阵与运行环境）、**在线审校**（上传/粘贴稿件 →
+工作台含六个页面：**概览**（能力矩阵与运行环境）、**在线审校**（上传/粘贴稿件 →
 运行 → 划改稿、问题清单、数据复算、批评修正、修订留痕、执行轨迹、导出）、
+**审校历史**（会话内多次审校的分数/严重度/维度趋势对比）、
 **术语库**（条目检索、禁用模式、动态更新与影子校验演示）、**Agent 架构**
 （Mermaid 工作流、节点职责、设计取舍）、**使用说明**（本地部署、岗位职责、边界限制）。
+
+稿件支持 **Markdown / 纯文本 / Word(.docx) / PDF** 上传（Word/PDF 自动抽取正文与表格；
+PDF 需含可复制文本）；审校结果可导出 **Markdown / JSON / HTML / Word(.docx) / PDF**
+五种格式（Word 与 PDF 由 `report.exporters` 生成，PDF 内嵌 STSong-Light 中文字体）。
 
 ### 2.2 命令行
 
@@ -166,7 +171,7 @@ smart-proofread-agent/
 仓库根目录已备好 `app.py`、`requirements.txt`、`.streamlit/config.toml`：
 
 1. 把仓库推到 GitHub（Public）；
-2. 打开 `https://share.streamlit.io/deploy?repository=<user>/<repo>&branch=main&mainModule=app.py`；
+2. 打开 `https://share.streamlit.io/deploy?repository=abaic2/smart-proofread-agent&branch=main&mainModule=app.py`；
 3. 用 GitHub 账号授权并点击 Deploy（这一步需本人完成 OAuth）；
 4. 之后每次 `git push`，云端 1–2 分钟自动重新部署。
 
