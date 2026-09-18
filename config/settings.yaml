@@ -74,6 +74,11 @@ engine:
     negated_context_exempt: true
     reference_section_exempt: true  # 参考文献区豁免语文规范检查
     min_context_chars: 12
+    # 置信度下限：低于该值的 INFO 级"提示"将被聚合层过滤，提升报告精度。
+    # 设为 0 可关闭过滤（保留全部低置信建议）。
+    min_confidence: 0.6
+    # 是否提示"中英文之间缺空格"（技术缩写白名单内的粘连仍豁免）
+    cjk_latin_space: true
   logic:
     min_sentence_chars: 12
     check_claim_evidence: true
