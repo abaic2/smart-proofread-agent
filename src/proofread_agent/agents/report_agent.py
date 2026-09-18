@@ -31,6 +31,14 @@ _SCALE = {
     Dimension.ACADEMIC: 200.0,
     Dimension.STYLE: 120.0,
 }
+# 评分用严重度权重：INFO 仅作"提示性建议"，不应显著拉低分数，
+# 故在评分中近乎免费（0.5），使综合分真实反映实质性错误。
+_SCORE_WEIGHT = {
+    Severity.FATAL: 100.0,
+    Severity.MAJOR: 20.0,
+    Severity.MINOR: 5.0,
+    Severity.INFO: 0.5,
+}
 # 维度 -> 综合权重
 _WEIGHT = {
     Dimension.POLITICAL: 0.35,
@@ -65,6 +73,16 @@ class ReportAgent(BaseAgent):
         suppressed = set(state.get("suppressed_ids") or [])
         issues = [i for i in issues
                   if not (i.severity == Severity.INFO and i.issue_id in suppressed)]
+        # 置信度过滤：低于阈值的 INFO 级"提示"多为边界噪声，默认剔除，
+        # 避免低置信建议稀释报告精度（可通过 min_confidence=0 关闭）。
+        min_conf = 0.0
+        try:
+            min_conf = float(self.settings.engine.get("suppression", {}).get("min_confidence", 0.0))
+        except (TypeError, ValueError):
+            min_conf = 0.0
+        if min_conf > 0:
+            issues = [i for i in issues
+                      if not (i.severity == Severity.INFO and i.confidence < min_conf)]
         annotate_positions(doc, issues)
 
         # ---- 维度聚合 ----
@@ -76,7 +94,7 @@ class ReportAgent(BaseAgent):
         for dim in [Dimension.POLITICAL, Dimension.LANGUAGE, Dimension.LOGIC,
                     Dimension.ACADEMIC, Dimension.STYLE]:
             items = by_dim.get(dim, [])
-            penalty = sum(i.severity.weight for i in items)
+            penalty = sum(_SCORE_WEIGHT[i.severity] for i in items)
             score = 100.0 * math.exp(-penalty / _SCALE[dim]) if penalty else 100.0
             c = Counter(i.severity.value for i in items)
             dim_scores.append(DimensionScore(
