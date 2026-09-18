@@ -184,6 +184,24 @@ class TestNormEngine(unittest.TestCase):
             self.assertFalse(self.doc.in_reference_section(i.span.start),
                              f"{i.rule_id} 不应在参考文献区报错")
 
+    def test_fullwidth_quote_skips_english(self):
+        doc = Document.from_text('The term "digital governance" is widely used.')
+        res = self.engine.run(doc)
+        self.assertEqual([i for i in res.issues if i.rule_id == "FMT-QUOTE"], [],
+                         "纯英文引号不应报全角问题")
+
+    def test_fullwidth_quote_flags_chinese(self):
+        doc = Document.from_text('落实"一件事一次办"场景。')
+        res = self.engine.run(doc)
+        self.assertTrue([i for i in res.issues if i.rule_id == "FMT-QUOTE"],
+                        "含中文的直引号应提示改用全角弯引号")
+
+    def test_cjk_latin_allowlist(self):
+        doc = Document.from_text("通过GitHub仓库管理代码，输出PDF报告。")
+        res = self.engine.run(doc)
+        self.assertEqual([i for i in res.issues if i.rule_id == "PUN-CJK-LATIN"], [],
+                         "技术缩写（GitHub/PDF）与中文粘连属通行写法，不应提示")
+
 
 class TestLogicEngine(unittest.TestCase):
     @classmethod
@@ -200,14 +218,55 @@ class TestLogicEngine(unittest.TestCase):
         self.assertIn("调研范围", hits[0].suggestion)
 
     def test_absolute_claims(self):
-        terms = {t for i in self.result.issues if i.rule_id == "LOGIC-ABSOLUTE"
-                 for t in i.meta.get("terms", [])}
-        self.assertIn("显而易见", terms)
-        self.assertIn("众所周知", terms)
+        # 内嵌的绝对化硬断言应被捕获（即便无证据也提示）
+        doc = Document.from_text(
+            "这一改革举措必然导致系统稳定性全面下降，必须引起高度警惕。")
+        res = self.engine.run(doc)
+        hits = [i for i in res.issues if i.rule_id == "LOGIC-ABSOLUTE"]
+        self.assertTrue(hits, "应捕获内嵌的绝对化断言")
+        terms = {t for i in hits for t in i.meta.get("terms", [])}
+        self.assertIn("必然导致", terms)
+        self.assertEqual(hits[0].severity, Severity.MAJOR)
+
+    def test_absolute_opener_is_not_flagged(self):
+        """句首修辞性开场白（众所周知，…/显而易见，…）不是事实断言，应跳过。"""
+        for opener in ("众所周知，数字治理很重要。", "显而易见，这项工作需要推进。"):
+            doc = Document.from_text(opener)
+            res = self.engine.run(doc)
+            self.assertEqual(
+                [i for i in res.issues if i.rule_id == "LOGIC-ABSOLUTE"], [],
+                f"开场白不应被判绝对化：{opener}")
 
     def test_vague_reference(self):
-        hits = [i for i in self.result.issues if i.rule_id == "LOGIC-VAGUE-REF"]
+        # 无先行语的多字短语应被标记
+        doc = Document.from_text("会议讨论了预算安排。该做法显著提升了整体效率。")
+        res = self.engine.run(doc)
+        hits = [i for i in res.issues if i.rule_id == "LOGIC-VAGUE-REF"]
         self.assertTrue(any(i.meta.get("word") == "该做法" for i in hits))
+
+    def test_vague_reference_has_antecedent_is_skipped(self):
+        """前文出现「二次录入现象」这类先行语时，该做法并非指代不明。"""
+        doc = Document.from_text("上线后出现了二次录入现象。该做法亟待优化解决。")
+        res = self.engine.run(doc)
+        self.assertEqual([i for i in res.issues if i.rule_id == "LOGIC-VAGUE-REF"], [])
+
+    def test_single_char_demonstrative_not_flagged(self):
+        """单字代词（其/此/该/这些/那些）句首几乎必有上下文，不应自动告警。"""
+        doc = Document.from_text("平台已上线运行。其稳定性在测试中表现良好。")
+        res = self.engine.run(doc)
+        self.assertEqual([i for i in res.issues if i.rule_id == "LOGIC-VAGUE-REF"], [])
+
+    def test_causal_leap_with_in_sentence_cause_is_skipped(self):
+        """本句内已陈述因（逗号前有条件），不构成因果跳步。"""
+        doc = Document.from_text("由于垂管系统未实现对接，导致业务办理中出现二次录入。")
+        res = self.engine.run(doc)
+        self.assertEqual([i for i in res.issues if i.rule_id == "LOGIC-CAUSAL-LEAP"], [])
+
+    def test_causal_leap_at_sentence_start_flagged(self):
+        """连接词在句首、前文无证据支撑，才是真正的因果跳步。"""
+        doc = Document.from_text("群众普遍反映办事不便。由此可见，该政策已经彻底失败。")
+        res = self.engine.run(doc)
+        self.assertTrue([i for i in res.issues if i.rule_id == "LOGIC-CAUSAL-LEAP"])
 
     def test_no_overgeneralization_when_scope_is_consistent(self):
         doc = Document.from_text(
