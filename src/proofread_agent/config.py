@@ -39,7 +39,17 @@ def _apply_env_overrides(cfg: Dict[str, Any]) -> Dict[str, Any]:
         node: Any = cfg
         for part in path[:-1]:
             node = node.setdefault(part, {})
-        node[path[-1]] = value
+        leaf = path[-1]
+        # 类型保持：若原配置该键为数值/布尔，则按原类型转换，避免 "0.1" 污染
+        if isinstance(node.get(leaf), bool):
+            node[leaf] = value.strip().lower() in ("1", "true", "yes", "on")
+        elif isinstance(node.get(leaf), (int, float)):
+            try:
+                node[leaf] = type(node[leaf])(value)
+            except ValueError:
+                node[leaf] = value
+        else:
+            node[leaf] = value
     return cfg
 
 
