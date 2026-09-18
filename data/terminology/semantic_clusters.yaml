@@ -62,6 +62,15 @@ language:
     - { pattern: "涉及到", fix: "涉及" }
     - { pattern: "每个群众都", fix: "每位群众都" }
     - { pattern: "进一步的加强", fix: "进一步加强" }
+    - { pattern: "按装", fix: "安装" }
+    - { pattern: "好象", fix: "好像" }
+    - { pattern: "既使", fix: "即使" }
+    - { pattern: "防碍", fix: "妨碍" }
+    - { pattern: "精减", fix: "精简" }
+    - { pattern: "重迭", fix: "重叠" }
+    - { pattern: "默守", fix: "墨守" }
+    - { pattern: "防犯", fix: "防范" }
+    - { pattern: "引响", fix: "影响" }
   词语误用:
     - { pattern: "首当其冲地(受益|获得|承担)", fix: "首当其冲意为最先受到冲击，不可用作“首先”", severity: MAJOR }
     - { pattern: "(下降|降低|减少)了?(\\d+(\\.\\d+)?)\\s*倍", fix: "\\1了百分之 X（倍数不可用于减少，请换算为百分比）", severity: MAJOR }
@@ -71,7 +80,8 @@ language:
     - { pattern: "(的|地|得)问题", fix: "结构助词使用需按语法功能判断", severity: INFO }
   标点:
     - { pattern: "[\\u4e00-\\u9fa5]{2,},\\s*[\\u4e00-\\u9fa5]", fix: "中文句内并列应使用顿号或全角逗号", severity: MINOR }
-    - { pattern: "[\"'`]", fix: "中文文本应使用全角引号“”‘’", severity: MINOR, skip_if_code: true }
+    # 直引号统一由 norm_engine 的 FMT-QUOTE 处理（仅对含中文内容的引号提示
+    # 改用全角弯引号），此处不再用 ["'`] 通配，以免把英文/代码中的直引号误报。
     - { pattern: "。{2,}|！{2,}|！\\?", fix: "重复标点，规范文本不使用", severity: MINOR }
     - { pattern: "[\\(\\[][^)\\]]*[\\)\\]]", fix: "中文语境括号应为全角（）", severity: INFO, halfwidth_only: true }
   数据规范:
