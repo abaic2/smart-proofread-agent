@@ -1,0 +1,27 @@
+# 智能审校 Agent —— 运行依赖
+#
+# 设计原则：约束在"必需即最小"。
+#   五大审校引擎与全部文本算法零第三方依赖，纯标准库实现，便于在离线内网环境中
+#   审计与部署。只有工作流编排层依赖 LangGraph，Web 工作台依赖 Streamlit 系。
+#   Streamlit Community Cloud 会从本文件安装全部依赖。
+
+# ---- 工作流编排（多 Agent 协作）----
+langgraph>=1.0,<2.0
+
+# ---- 数据与配置 ----
+PyYAML>=6.0
+
+# ---- Web 工作台（Streamlit）----
+# 仅 app.py 需要；若只跑 CLI / 作为库调用，可只装上面两项
+streamlit>=1.36
+streamlit-option-menu>=0.4.0
+plotly>=5.22.0
+pandas>=2.0
+# 稿件上传：Word(.docx) 与 PDF 文本抽取
+python-docx>=1.1
+pdfplumber>=0.11
+# 报告导出：审校结果生成 Word / PDF
+reportlab>=4.0
+
+# ---- 本地大模型调用 ----
+# 适配层直接使用 urllib.request，无需额外 HTTP 客户端。

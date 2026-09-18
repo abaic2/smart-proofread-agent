@@ -1,0 +1,404 @@
+meta:
+  name: 中央政策术语标准库
+  version: "2026.09.1"
+  updated_at: "2026-09-18"
+  maintainer: 智能审校平台 / 术语治理组
+  sources:
+    - 《中国共产党章程》(2022 年修订)
+    - 党的二十大报告
+    - 党的十九届六中全会《中共中央关于党的百年奋斗重大成就和历史经验的决议》
+    - 《党政机关公文处理工作条例》《党政机关公文格式》GB/T 9704-2012
+    - 新华社《新闻报道中的禁用词和慎用词》
+    - 人民日报社《时政报道用语规范》
+  notice: >
+    本库为可运行示例库，覆盖高频易错项。生产环境应通过 updater 对接人民日报
+    语料 / 新华社规范文件 / 本单位术语台账持续增量更新，禁止手工直接改写。
+
+entries:
+  # ============ 一、称谓与固定表述 ============
+  - id: PTR-0001
+    term: 以习近平同志为核心的党中央
+    type: literal
+    severity: FATAL
+    tags: [称谓, 核心表述]
+    variants:
+      - 以习近平总书记为核心的党中央
+      - 以习近平主席为核心的党中央
+      - 以习近平为核心的党中央
+      - 以习近平同志为核心的党中央领导
+    explain: >
+      党的十八届六中全会正式确立习近平同志党中央的核心、全党的核心地位。
+      规范表述中"同志"不可省略、不可替换为职务称谓。
+    source: 党的十九届六中全会《决议》
+    confidence: 0.99
+
+  - id: PTR-0002
+    term: 习近平新时代中国特色社会主义思想
+    type: literal
+    severity: FATAL
+    tags: [指导思想]
+    variants:
+      - 习近平新时代中国社会主义思想
+      - 习近平新时代中国特色社会主义思想体系
+      - 习近平思想
+      - 新时代习近平中国特色社会主义思想
+    explain: >
+      党的十九大确立为党必须长期坚持的指导思想。不得简称为"习近平思想"，
+      "新时代"与"中国特色社会主义"的位置不可调换。
+    source: 《中国共产党章程》总纲
+    confidence: 0.99
+
+  - id: PTR-0003
+    term: 习近平总书记系列重要讲话精神
+    type: deprecated
+    severity: MAJOR
+    tags: [时态, 提法演进]
+    replaces: 习近平新时代中国特色社会主义思想
+    variants:
+      - 习近平总书记系列重要讲话
+      - 总书记系列重要讲话精神
+    explain: >
+      "系列重要讲话精神"是 2017 年党的十九大之前的提法。十九大后应统一使用
+      "习近平新时代中国特色社会主义思想"，历史文献引述除外。
+    source: 党的十九大报告
+    confidence: 0.95
+
+  - id: PTR-0004
+    term: 党中央集中统一领导
+    type: literal
+    severity: MAJOR
+    tags: [领导体制]
+    variants:
+      - 党中央的统一领导
+      - 党中央正确领导
+      - 党中央坚强有力领导
+    explain: >
+      "党中央集中统一领导"是规范表述，不得随意加"正确""坚强"等修饰后替换结构。
+    source: 《中共中央关于加强党的政治建设的意见》
+    confidence: 0.9
+
+  - id: PTR-0005
+    term: 中共中央总书记、国家主席、中央军委主席习近平
+    type: ordering
+    severity: MAJOR
+    tags: [职务排序]
+    order:
+      - 中共中央总书记
+      - 国家主席
+      - 中央军委主席
+    allow_abbrev: true
+    explain: >
+      多个职务并列时须按党内职务、国家职务、军队职务的顺序排列，不可颠倒。
+    source: 人民日报社时政报道用语规范
+    confidence: 0.93
+
+  # ============ 二、组合提法（顺序/完整性） ============
+  - id: PTR-0010
+    term: 四个意识
+    type: ordering
+    severity: FATAL
+    tags: [四个意识, 组合提法]
+    order: [政治意识, 大局意识, 核心意识, 看齐意识]
+    pattern: "四个意识[^。；;\\n]{0,60}"
+    explain: >
+      四个意识为"政治意识、大局意识、核心意识、看齐意识"，顺序固定，
+      且不可增删、不可改为"看齐意识"以外的表述（如"对齐意识""服从意识"）。
+    source: 中共中央政治局民主生活会
+    confidence: 0.97
+
+  - id: PTR-0011
+    term: 四个自信
+    type: ordering
+    severity: FATAL
+    tags: [四个自信, 组合提法]
+    order: [道路自信, 理论自信, 制度自信, 文化自信]
+    pattern: "四个自信[^。；;\\n]{0,60}"
+    explain: 四个自信为"道路自信、理论自信、制度自信、文化自信"，顺序固定。
+    source: 党的十九大报告
+    confidence: 0.97
+
+  - id: PTR-0012
+    term: 五位一体总体布局
+    type: literal
+    severity: MAJOR
+    tags: [总体布局]
+    variants:
+      - 五位一体的总体格局
+      - 五位一体战略布局
+      - "五位一体：经济建设、政治建设、文化建设、社会建设"
+    explain: >
+      规范为"'五位一体'总体布局"，涵盖经济建设、政治建设、文化建设、
+      社会建设、生态文明建设五个方面，不得漏列生态文明建设，不得称为"战略布局"。
+    source: 党的十八大报告
+    confidence: 0.96
+
+  - id: PTR-0013
+    term: 四个全面战略布局
+    type: literal
+    severity: MAJOR
+    tags: [战略布局]
+    variants:
+      - 四个全面总体布局
+      - 四个全面战略举措
+      - 四个全面战略部署
+    explain: >
+      规范为"'四个全面'战略布局"，内部为全面建设社会主义现代化国家、
+      全面深化改革、全面依法治国、全面从严治党。
+    source: 党的十九届五中全会
+    confidence: 0.95
+
+  - id: PTR-0014
+    term: 两个维护
+    type: literal
+    severity: FATAL
+    tags: [两个维护]
+    variants:
+      - 维护习近平总书记的核心地位、维护党中央权威
+      - 两个维护即维护党中央权威和集中统一领导
+    explain: >
+      完整表述为"坚决维护习近平总书记党中央的核心、全党的核心地位，
+      坚决维护党中央权威和集中统一领导"，不可只保留后半句。
+    source: 《中共中央关于加强党的政治建设的意见》
+    confidence: 0.95
+
+  - id: PTR-0015
+    term: 新发展理念
+    type: ordering
+    severity: MAJOR
+    tags: [新发展理念]
+    order: [创新, 协调, 绿色, 开放, 共享]
+    pattern: "新发展理念[^。；;\\n]{0,60}"
+    explain: 新发展理念为"创新、协调、绿色、开放、共享"，顺序固定。
+    source: 党的十八届五中全会
+    confidence: 0.96
+
+  # ============ 三、易混易错（别字/近形） ============
+  - id: PTR-0020
+    term: 部署
+    type: literal
+    severity: MINOR
+    tags: [别字]
+    variants: [布署]
+    explain: 规范用字为"部署"（国务院决策部署），"布署"为错别字。
+    source: 《现代汉语词典》第 7 版
+    confidence: 0.99
+
+  - id: PTR-0021
+    term: 党的十八大以来
+    type: literal
+    severity: MINOR
+    tags: [别字, 时间表述]
+    variants: [党的十八以来, 党的十八大一来]
+    explain: 规范表述为"党的十八大以来"，注意"大"字不可漏。
+    source: 公文用语规范
+    confidence: 0.98
+
+  - id: PTR-0022
+    term: 党风廉政建设
+    type: literal
+    severity: MINOR
+    tags: [廉政]
+    variants: [党风廉洁建设, 党风廉政建议]
+    explain: 规范表述为"党风廉政建设"。
+    source: 《中国共产党章程》
+    confidence: 0.95
+
+  - id: PTR-0023
+    term: 纪检监察
+    type: literal
+    severity: MINOR
+    tags: [机构]
+    variants: [纪检检查, 纪检监察机关检查, 纪律检查监察]
+    explain: 规范简称为"纪检监察"，机构为"纪律检查委员会、监察委员会"。
+    source: 《中华人民共和国监察法》
+    confidence: 0.94
+
+  - id: PTR-0024
+    term: 巡视
+    type: literal
+    severity: MINOR
+    tags: [机构]
+    variants: [巡查组, 中央巡查, 巡视巡查]
+    explain: >
+      中央和省级党委派出的是"巡视组"，开展"巡视"工作；"巡查"用于基层
+      日常监督，两者不可混用。
+    source: 《中国共产党巡视工作条例》
+    confidence: 0.92
+
+  # ============ 四、时态与提法演进 ============
+  - id: PTR-0030
+    term: 巩固拓展脱贫攻坚成果同乡村振兴有效衔接
+    type: deprecated
+    severity: MAJOR
+    tags: [时态, 提法演进]
+    replaces: 巩固拓展脱贫攻坚成果同乡村振兴有效衔接
+    variants:
+      - 打赢脱贫攻坚战是当前重点工作
+      - 全面打赢脱贫攻坚战
+    explain: >
+      脱贫攻坚战已于 2020 年如期完成，2021 年起转入衔接过渡期，
+      不再作为"当前"或"现阶段"目标表述。
+    source: 2021 年中央一号文件
+    confidence: 0.9
+
+  - id: PTR-0031
+    term: 全面建成社会主义现代化强国
+    type: deprecated
+    severity: MAJOR
+    tags: [时态, 提法演进]
+    variants:
+      - 全面建设社会主义现代化强国
+    explain: >
+      党的二十大后，未来目标表述为"全面建成社会主义现代化强国"；
+      "全面建设"用于描述既有进程。撰写时须与目标阶段匹配。
+    source: 党的二十大报告
+    confidence: 0.88
+
+  - id: PTR-0032
+    term: 打铁必须自身硬
+    type: deprecated
+    severity: MINOR
+    tags: [提法演进]
+    variants: [打铁还需自身硬]
+    explain: >
+      党的十九大报告表述为"打铁必须自身硬"，不再使用"还需"。
+      引用历史文献时可保留原文并加引注。
+    source: 党的十九大报告
+    confidence: 0.9
+
+  - id: PTR-0033
+    term: 共建"一带一路"
+    type: literal
+    severity: MAJOR
+    tags: [涉外, 提法]
+    variants: [一带一路战略, 一带一路计划, 中国的一带一路]
+    explain: >
+      2019 年起规范表述为"共建'一带一路'倡议"，不使用"一带一路战略"。
+    source: 新华社规范文件
+    confidence: 0.92
+
+  # ============ 五、涉台涉港涉澳规范（政治红线） ============
+  - id: PTR-0040
+    term: 中国台湾
+    type: literal
+    severity: FATAL
+    tags: [涉台, 政治红线]
+    variants: [台湾政府, 台湾国, 中华民国政府, 台湾当局政府, 台湾领导人]
+    explain: >
+      台湾是中国的一部分。不得使用"台湾政府""台湾国"等表述；
+      两岸官方机构可称"台湾当局"；其地区负责人称"台湾地区领导人"。
+      单独出现"台湾"时应结合上下文确保指向我国台湾地区。
+    source: 新华社《新闻报道中的禁用词和慎用词》
+    confidence: 0.99
+
+  - id: PTR-0041
+    term: 中国香港
+    type: literal
+    severity: FATAL
+    tags: [涉港, 政治红线]
+    variants: [香港和中国, 中国与香港, 中港, 香港政府和国家]
+    explain: >
+      香港特别行政区是中国的一部分，不得将"中国"与"香港"并列表述，
+      不得使用"中港"等割裂性提法；规范称"中国香港""香港特别行政区"。
+    source: 涉港报道用语规范
+    confidence: 0.99
+
+  - id: PTR-0042
+    term: 中国澳门
+    type: literal
+    severity: FATAL
+    tags: [涉澳, 政治红线]
+    variants: [澳门和中国, 中国与澳门, 中澳关系指中国与澳门]
+    explain: 澳门特别行政区是中国的一部分，不得与"中国"并列或割裂表述。
+    source: 涉澳报道用语规范
+    confidence: 0.99
+
+  - id: PTR-0043
+    term: 一国两制
+    type: literal
+    severity: MAJOR
+    tags: [涉港澳]
+    variants: [一国两制方针将改变, 两制一国]
+    explain: "'一国两制'是完整方针，不可颠倒为'两制一国'，不可作否定性预测。"
+    source: 党的二十大报告
+    confidence: 0.93
+
+  # ============ 六、涉外与民族宗教 ============
+  - id: PTR-0050
+    term: 人类命运共同体
+    type: literal
+    severity: MAJOR
+    tags: [涉外]
+    variants: [人类共同命运体, 人类命运共同体体, 全球人类命运共同体]
+    explain: 规范表述为"人类命运共同体"，前置可加"推动构建"。
+    source: 党的二十大报告
+    confidence: 0.94
+
+  - id: PTR-0051
+    term: 铸牢中华民族共同体意识
+    type: literal
+    severity: MAJOR
+    tags: [民族]
+    variants: [树立中华民族共同体意识, 筑牢中华民族共同体意识, 培养中华民族共同体意识]
+    explain: 民族工作主线的规范动词为"铸牢"，不用"树立""筑牢""培养"。
+    source: 2021 年中央民族工作会议
+    confidence: 0.95
+
+  - id: PTR-0052
+    term: 社会主义核心价值观
+    type: ordering
+    severity: MAJOR
+    tags: [价值观]
+    order: [富强, 民主, 文明, 和谐, 自由, 平等, 公正, 法治, 爱国, 敬业, 诚信, 友善]
+    pattern: "社会主义核心价值观[^。；;\\n]{0,120}"
+    explain: >
+      社会主义核心价值观 12 个词的顺序固定：国家层面、社会层面、公民层面，
+      不可打乱或调换层面。
+    source: 党的十八大报告
+    confidence: 0.94
+
+  # ============ 七、语义匹配型（无固定字面变体） ============
+  - id: PTR-0060
+    term: 以人民为中心的发展思想
+    type: semantic
+    severity: MAJOR
+    tags: [语义匹配]
+    semantic_seeds:
+      - 以人民为核心
+      - 把人民放在最中心位置
+      - 人民是中心
+    explain: >
+      规范表述为"以人民为中心的发展思想"。"核心"与"中心"在政治话语中
+      语义层级不同，不可互换。
+    source: 党的十九届四中全会
+    confidence: 0.86
+
+  - id: PTR-0061
+    term: 党的全面领导
+    type: semantic
+    severity: MAJOR
+    tags: [语义匹配]
+    semantic_seeds:
+      - 党领导一切事务
+      - 党管一切
+      - 党领导所有工作
+    explain: >
+      规范表述为"坚持和加强党的全面领导""党是领导一切的"，
+      "党管一切""党领导一切事务"属不当简化，易生歧义。
+    source: 党的十九大报告
+    confidence: 0.84
+
+  - id: PTR-0062
+    term: 自我革命
+    type: semantic
+    severity: MINOR
+    tags: [语义匹配]
+    semantic_seeds:
+      - 自我改进
+      - 自我完善机制
+      - 内部改革
+    explain: >
+      "自我革命"是党的鲜明品格和规范术语，写作中不可降格为"自我改进"
+      "内部改革"等日常表述。
+    source: 党的二十大报告
+    confidence: 0.82

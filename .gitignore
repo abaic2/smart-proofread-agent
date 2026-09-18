@@ -1,0 +1,24 @@
+# ---- Python ----
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# ---- 运行产物 ----
+outputs/
+.cache/
+*.log
+run*.log
+
+# ---- 模型与密钥 ----
+.env
+.env.local
+*.gguf
+models/
+
+# ---- 验证/调试产物（非交付物）----
+screenshot.py
+shot_verify.py
+shots/
+.pytest_cache/

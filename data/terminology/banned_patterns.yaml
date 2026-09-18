@@ -1,0 +1,109 @@
+meta:
+  name: 禁用词 / 慎用词模式库
+  version: "2026.09.1"
+  sources:
+    - 新华社《新闻报道中的禁用词和慎用词》
+    - 《广告语言文字管理暂行规定》
+    - 国家新闻出版署报刊质量管理相关规定
+  notice: 本库面向"调研专报 / 学术期刊"两类文体，偏严。allow_context 命中时降级为提示。
+
+rules:
+  # ---------- 政治性禁用与慎用 ----------
+  - id: BAN-0001
+    pattern: "中共(?!中央|党员|党史|党建)"
+    severity: FATAL
+    category: 政治表述
+    message: "“中共”为境外媒体惯用简称，正式文本应使用“中国共产党”或“党”。"
+    suggestion: "中国共产党"
+    allow_context: ["原文引述", "境外媒体", "批判"]
+    reference: 新华社禁用词
+
+  - id: BAN-0002
+    pattern: "(中国大陆|大陆中国|中国内地与台湾)"
+    severity: FATAL
+    category: 涉台表述
+    message: "不得使用“大陆中国”等割裂性表述；与台湾对应时用“祖国大陆”。"
+    suggestion: "祖国大陆"
+    reference: 新华社禁用词
+
+  - id: BAN-0003
+    pattern: "(北朝鲜|南韩|北韩)"
+    severity: MINOR
+    category: 涉外表述
+    message: "规范国名为“朝鲜”“韩国”，不使用“北朝鲜”“南韩”“北韩”。"
+    suggestion: "朝鲜 / 韩国"
+    reference: 新华社禁用词
+
+  - id: BAN-0004
+    pattern: "(满洲国|满洲帝国|伪满州国)"
+    severity: FATAL
+    category: 历史表述
+    message: "须称“伪满洲国”，加“伪”字，不可省略。"
+    suggestion: "伪满洲国"
+    reference: 新华社禁用词
+
+  - id: BAN-0005
+    pattern: "(藏独|疆独|东突|台独势力分裂国家)"
+    severity: FATAL
+    category: 分裂表述
+    message: "涉及分裂势力表述须严格依据官方口径，避免直接铺陈非法主张。"
+    suggestion: "依法予以批驳并加引号引用官方定性"
+    reference: 国家民委、中央台办口径
+
+  - id: BAN-0006
+    pattern: "(台湾总统|台湾副总统|台湾外交部|台湾国防部|台湾立法院)"
+    severity: FATAL
+    category: 涉台表述
+    message: "不得使用“台湾总统”“台湾外交部”等擅自设机构的称谓。"
+    suggestion: "台湾地区领导人 / 台湾当局有关机构"
+    reference: 新华社禁用词
+
+  - id: BAN-0007
+    pattern: "(打虎拍蝇|大老虎|苍蝇老虎一起打)"
+    severity: MINOR
+    category: 文体失当
+    message: "口语化反腐用语不宜出现在专报、学术文本中，应改为规范表述。"
+    suggestion: "坚持受贿行贿一起查，一体推进不敢腐、不能腐、不想腐"
+    reference: 公文用语规范
+
+  - id: BAN-0008
+    pattern: "(第一把交椅|一把手工程式管理)"
+    severity: INFO
+    category: 文体失当
+    message: "建议替换为规范书面表述。"
+    suggestion: "主要负责人牵头的重点工程"
+    reference: 公文用语规范
+
+  # ---------- 极端化 / 绝对化 ----------
+  - id: BAN-0100
+    pattern: "(史上最|前所未有地伟大|绝对正确|完全彻底解决|万无一失地确保)"
+    severity: MAJOR
+    category: 绝对化表述
+    message: "专报与学术文本不宜使用绝对化、情绪化修饰，易被质疑严谨性。"
+    suggestion: "改为可度量、可验证的表述（如“显著提升”“基本解决”）"
+    reference: 学术写作规范
+
+  - id: BAN-0101
+    pattern: "(彻底解决|从根本上杜绝|一劳永逸)"
+    severity: MINOR
+    category: 绝对化表述
+    message: "建议改为“有效缓解”“大幅降低”等留有余地的表述。"
+    suggestion: "有效缓解"
+    reference: 学术写作规范
+
+  # ---------- 时效性/事实性风险 ----------
+  - id: BAN-0200
+    pattern: "(今年将实现|明年完成|预计在\\d{4}年全部建成)"
+    severity: INFO
+    category: 时效表述
+    message: "相对时间词在跨年度文本中会失效，建议改为绝对年份并标注截稿日期。"
+    suggestion: "改为“2026 年底前”等绝对时间"
+    reference: 公文时效表达规范
+
+  - id: BAN-0201
+    pattern: "(据统计显示|据有关数据显示|相关研究表明)"
+    severity: MAJOR
+    category: 数据来源
+    message: "数据引用须可溯源，不得使用模糊出处。"
+    suggestion: "标注具体机构、报告名称、发布时间与页码"
+    reference: 《学术出版规范》CY/T 174-2019

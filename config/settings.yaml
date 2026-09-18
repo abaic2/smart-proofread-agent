@@ -1,0 +1,125 @@
+# ============================================================
+# 智能审校 Agent 全局配置
+# 本地部署大语言模型 + 规则引擎混合架构
+# ============================================================
+
+llm:
+  # 后端类型：ollama | openai_compatible（vLLM / LM Studio / Xinference / TGI）
+  backend: openai_compatible
+
+  # ---- Ollama 本地部署 ----
+  ollama:
+    base_url: "http://127.0.0.1:11434"
+    model: "qwen2.5:14b-instruct"
+    num_ctx: 8192
+    temperature: 0.1
+
+  # ---- OpenAI 兼容本地端点（vLLM / LM Studio / Xinference）----
+  openai_compatible:
+    base_url: "http://127.0.0.1:8000/v1"
+    model: "Qwen2.5-14B-Instruct"
+    api_key: "EMPTY"
+    temperature: 0.1
+    max_tokens: 2048
+    timeout: 120
+
+  # ---- 离线兜底 ----
+  # 当本地模型不可达时，自动降级为规则引擎 + 模板化生成，
+  # 保证工作流仍可端到端跑通（结果标注 degraded=True）
+  fallback_to_rule_engine: true
+
+  # 本地 embedding 模型（用于语义级术语匹配与段落查重）
+  embedding:
+    backend: auto          # auto | ollama | openai_compatible | lexical
+    model: "bge-m3"        # 或 bge-large-zh-v1.5
+    dim: 1024
+    cache_dir: ".cache/embeddings"
+    lexical_fallback: true # 无向量模型时使用字符 n-gram TF-IDF 近似
+
+terminology:
+  core_terms: "data/terminology/core_terms.yaml"
+  banned_patterns: "data/terminology/banned_patterns.yaml"
+  semantic_clusters: "data/terminology/semantic_clusters.yaml"
+  # 动态更新源：官方文件、权威媒体页面、本单位术语台账
+  update_sources:
+    - id: "people-daily-lexicon"
+      type: "json_api"
+      url: "https://example.internal/api/terminology/people-daily"
+      interval_hours: 24
+      enabled: false          # 内网部署时启用
+    - id: "local-ledger"
+      type: "file"
+      path: "data/terminology/local_ledger.yaml"
+      interval_hours: 1
+      enabled: true
+  # 更新策略
+  update_policy:
+    mode: "shadow"            # shadow（影子校验后人工确认）| auto（自动生效）
+    require_human_approval: true
+    max_version_drift: 3      # 允许自动合并的最大版本跨度
+    keep_history: true
+
+engine:
+  # 三级术语校验
+  term_matching:
+    exact: true               # L1 字面/Aho-Corasick 多模匹配
+    fuzzy: true               # L2 编辑距离近似（别字、漏字、增字）
+    fuzzy_threshold: 0.86
+    semantic: true            # L3 语义向量匹配
+    semantic_threshold: 0.82
+    max_edit_distance: 2
+   # 误报控制
+  suppression:
+    quoted_text_exempt: true   # 引号内原文引述豁免
+    negated_context_exempt: true
+    reference_section_exempt: true  # 参考文献区豁免语文规范检查
+    min_context_chars: 12
+  logic:
+    min_sentence_chars: 12
+    check_claim_evidence: true
+    check_causal_leap: true
+    check_vague_reference: true
+    check_quantifier: true
+  academic:
+    data_compliance: true
+    format_check: true
+    duplicate_detection: true
+    reference_check: true
+    # 查重：段落级 MinHash + 语义余弦
+    duplicate:
+      shingle_size: 5
+      minhash_perm: 128
+      simhash_bits: 64
+      internal_corpus: "data/corpus"
+      similarity_threshold: 0.72
+      semantic_threshold: 0.88
+    # 数据一致性
+    data:
+      check_sum_consistency: true     # 总量 = 分项之和
+      check_percent_sum: true         # 占比合计 ≈ 100% 或 ≤100%
+      tolerance: 0.01
+      check_unit_consistency: true
+      check_yoy_mom: true             # 同比/环比口径
+
+style:
+  presets_file: "data/terminology/semantic_clusters.yaml"
+  default_preset: "公文专报"
+  transfer_mode: "suggest"     # suggest（仅给修改建议）| rewrite（LLM 直接改写）| diff（生成对照稿）
+
+report:
+  output_dir: "outputs"
+  formats: [markdown, html, json]
+  include_fix_preview: true
+  severity_weights:
+    FATAL: 100
+    MAJOR: 20
+    MINOR: 5
+    INFO: 1
+
+graph:
+  # LangGraph 编排参数
+  parallel_agents: true
+  max_critic_rounds: 2
+  enable_critic: true          # 批评修正环
+  enable_fact_check: true      # 事实/数据校验节点
+  checkpoint: "memory"         # memory | sqlite

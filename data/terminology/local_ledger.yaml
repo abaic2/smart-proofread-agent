@@ -1,0 +1,20 @@
+meta:
+  name: 本单位增量术语台账
+  version: "2026.09.1"
+  priority: highest
+  note: |
+    本台账由术语管理岗维护，优先级高于中央术语库，用于覆写本地口径。
+    新增条目请走 `proofread-agent terms approve --file <pending.yaml>` 流程，
+    不要直接手改本文件（避免绕过影子校验与留痕）。
+  entry_template:
+    id: "LOCAL-0001"
+    term: "本单位规范表述"
+    type: "literal"           # literal | ordering | semantic | deprecated
+    severity: "MAJOR"         # FATAL | MAJOR | MINOR | INFO
+    tags: ["本地口径"]
+    variants: ["常见错误写法"]
+    explain: "为什么这样规定，引用哪份文件"
+    source: "本单位《公文用语规范》第 X 条"
+    confidence: 0.95
+
+entries: []

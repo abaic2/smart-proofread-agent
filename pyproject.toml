@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "proofread-agent"
+version = "1.0.0"
+description = "基于本地部署大语言模型的多 Agent 智能审校系统（政治术语精准校验 / 语文规范 / 逻辑严密性 / 专业文本深度审校 / 风格迁移）"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "Proprietary" }
+dependencies = [
+    "langgraph>=1.0,<2.0",
+    "PyYAML>=6.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0"]
+
+[project.scripts]
+proofread-agent = "proofread_agent.cli:main"
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
