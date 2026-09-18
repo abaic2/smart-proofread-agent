@@ -168,15 +168,38 @@ smart-proofread-agent/
 
 ### 部署到 Streamlit Community Cloud
 
-仓库根目录已备好 `app.py`、`requirements.txt`、`.streamlit/config.toml`：
+仓库根目录已备好 `app.py`、`requirements.txt`、`.streamlit/config.toml`、`runtime.txt`（Python 3.11）：
 
 1. 把仓库推到 GitHub（Public）；
-2. 打开 `https://share.streamlit.io/deploy?repository=abaic2/smart-proofread-agent&branch=main&mainModule=app.py`；
+2. 打开 `https://share.streamlit.io/deploy?repository=abaic2/smart-proofread-agent&branch=main&mainModule=app.py`
+   （新版控制台也可从 `https://streamlit.io/cloud` 连接仓库）；
 3. 用 GitHub 账号授权并点击 Deploy（这一步需本人完成 OAuth）；
 4. 之后每次 `git push`，云端 1–2 分钟自动重新部署。
 
 云端无本地模型时自动以纯规则引擎运行（页面会明确提示 `degraded`），
 所有硬性校验能力不受影响。
+
+#### 通过 Secrets 启用云端大模型审校
+
+默认配置指向本机 `127.0.0.1:8000`，云端不可达，故走规则引擎兜底。
+若想让云端应用也做 LLM 分析，在 Streamlit Cloud 的 **App → Settings → Secrets**
+填入你的 OpenAI 兼容端点（任意云上 vLLM / LM Studio / 厂商 API 均可）：
+
+```toml
+[llm]
+backend = "openai_compatible"
+
+[llm.openai_compatible]
+base_url = "https://你的端点/v1"
+api_key = "sk-..."
+model = "模型名"
+temperature = "0.1"
+max_tokens = "2048"
+timeout = "120"
+```
+
+应用启动时会把上述 Secrets 自动映射为 `PFRD_LLM__*` 环境变量并覆盖配置，
+无需改代码。`fallback_to_rule_engine` 保持 `true` 即可在端点偶发不可达时自动降级。
 
 ---
 
