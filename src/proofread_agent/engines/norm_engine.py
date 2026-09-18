@@ -28,6 +28,17 @@ from .base import BaseEngine, EngineResult
 _HALF_TO_FULL = {",": "，", ";": "；", ":": "：", "?": "？", "!": "！"}
 _PAIRED = [("“", "”"), ("‘", "’"), ("（", "）"), ("《", "》"), ("【", "】"), ("(", ")"), ('"', '"')]
 
+# 中英文粘连时的"免提示"技术词白名单：这些词与中文直接相邻是通行写法
+# （如「API接口」「PDF报告」「GitHub仓库」），不应作为排版问题提示，避免噪声。
+_LATIN_CJK_ALLOW = {
+    "api", "pdf", "doc", "docx", "app", "gdp", "cpu", "gpu", "url", "uri", "ui", "ux",
+    "kpi", "okr", "json", "xml", "sql", "html", "css", "js", "ts", "web", "excel",
+    "word", "github", "gitlab", "streamlit", "python", "java", "linux", "windows",
+    "macos", "http", "https", "seo", "roi", "saas", "paas", "iaas", "id", "ip",
+    "ai", "vr", "ar", "3d", "qq", "wx", "wifi", "arxiv", "doi", "ppt", "pptx",
+    "jpg", "png", "mp3", "mp4", "utf", "ascii", "sdk", "qq", "wechat", "app",
+}
+
 
 class NormEngine(BaseEngine):
     name = "norm_engine"
@@ -162,27 +173,30 @@ class NormEngine(BaseEngine):
                 agent="language",
             ))
         # 中文与英文之间缺空格（学术刊物常见排版要求）
-        # Python 的 re 不支持变长 look-behind，因此改为显式扫描字符边界。
-        # 仅提示"英文单词 + 中文"的情形；"数字 + 中文量词"（如 28 个）在中文
-        # 公文与期刊中均为正常写法，不报，避免噪声。
-        for i in range(1, len(text)):
-            prev, cur = text[i - 1], text[i]
-            if not _is_cjk(cur):
-                continue
-            if not (prev.isascii() and prev.isalpha()):
-                continue
-            if text[max(0, i - 1):i] == " ":
-                continue
+        # 为控制误报，仅对"连续 3+ 字母的英文词且其后直接粘连中文、且未用空格
+        # 分隔"的情形提示；技术缩写（API/PDF/GitHub 等）与中文相邻属通行写法，
+        # 列入白名单免提示；纯数字 + 中文量词（28 个）本就是正常写法，不扫描。
+        if not self.cfg.get("cjk_latin_space", True):
+            return issues
+        for m in re.finditer(r"[A-Za-z]{3,}(?=[\u4e00-\u9fff])", text):
+            if m.start() > 0 and text[m.start() - 1] == " ":
+                continue                       # 已用空格分隔，规范写法
+            token = m.group(0)
+            if token.lower() in _LATIN_CJK_ALLOW:
+                continue                       # 技术词粘连属通行写法
+            if doc.in_reference_section(m.start()):
+                continue                       # 参考文献区外文标题不作要求
+            nxt = text[m.end()] if m.end() < len(text) else ""
             issues.append(make_issue(
                 category=Category.FORMAT,
                 severity=Severity.INFO,
                 rule_id="PUN-CJK-LATIN",
                 message="中英文之间建议留一个半角空格（按刊物排版要求）",
-                span=Span(i, i + 1),
-                original=cur,
-                suggestion=f" {cur}",
+                span=Span(m.start(), m.end()),
+                original=f"{token}{nxt}",
+                suggestion=f"{token} {nxt}",
                 source="期刊排版通例",
-                confidence=0.6,
+                confidence=0.55,
                 agent="language",
             ))
         return issues
@@ -258,13 +272,15 @@ class NormEngine(BaseEngine):
     # ---- 长句 -------------------------------------------------------
     def _long_sentence(self, doc: Document) -> List[Issue]:
         issues: List[Issue] = []
-        limit = 75
+        # 阈值上调：仅当句子过长且停顿极密时才提示，避免把公文/学术文本中
+        # 普遍存在的 70-90 字复合句误判为可读性问题（精度优先）。
+        limit = 90
         for s, e, sent in doc.sentences:
             body = sent.strip()
             if body.startswith("["):        # 参考文献条目豁免
                 continue
             commas = body.count("，") + body.count("、")
-            if len(body) > limit and commas >= 4:
+            if len(body) > limit and commas >= 5:
                 issues.append(make_issue(
                     category=Category.LANGUAGE_NORM,
                     severity=Severity.INFO,
@@ -288,6 +304,11 @@ class NormEngine(BaseEngine):
         for m in re.finditer(r'"([^"\n]{1,40})"', text):
             if doc.in_reference_section(m.start()):
                 continue
+            inner = m.group(1)
+            # 纯英文/数字引号（如 "digital governance"、"2024"）不是中文语境问题，
+            # 仅当引号内含有中文时才按规范提示改用全角弯引号，避免误报英文术语。
+            if not any("\u4e00" <= c <= "\u9fff" for c in inner):
+                continue
             issues.append(make_issue(
                 category=Category.FORMAT,
                 severity=Severity.MINOR,
@@ -295,9 +316,9 @@ class NormEngine(BaseEngine):
                 message="中文文本应使用全角弯引号「“ ”」",
                 span=Span(m.start(), m.end()),
                 original=m.group(0),
-                suggestion=f"“{m.group(1)}”",
+                suggestion=f"“{inner}”",
                 source="GB/T 15834-2011",
-                confidence=0.9,
+                confidence=0.92,
                 agent="language",
             ))
         # 半角括号包裹中文
